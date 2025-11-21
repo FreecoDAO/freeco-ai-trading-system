@@ -21,8 +21,8 @@ const CONFIG = {
     // Primary: DeepSeek via Novita
     deepseek: {
       apiKey: process.env.NOVITA_API_KEY,
-      baseURL: process.env.DEEPSEEK_API_URL || 'https://api.novita.ai/v3/openai',
-      model: process.env.DEEPSEEK_MODEL || 'deepseek-ai/DeepSeek-V3'
+      baseURL: process.env.DEEPSEEK_API_URL || 'https://api.novita.ai/openai/v1',
+      model: process.env.DEEPSEEK_MODEL || 'deepseek/deepseek-r1'
     },
     // Secondary: Minimax M2
     minimax: {
