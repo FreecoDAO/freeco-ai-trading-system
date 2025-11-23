@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  freeco-ai-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: freeco-ai-trading-bot
+    ports:
+      - "8501:8501"  # Dashboard
+      - "1883:1883"  # MQTT Broker
+    environment:
+      - NOVITA_API_KEY=${NOVITA_API_KEY}
+      - DEEPSEEK_API_URL=https://api.novita.ai/openai/v1
+      - DEEPSEEK_MODEL=deepseek/deepseek-r1
+      - MQTT_BROKER=localhost
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_PREFIX=hbot/predictions
+      - MASTER_WALLET_ADDRESS=${MASTER_WALLET_ADDRESS}
+      - MASTER_WALLET_PRIVATE_KEY=${MASTER_WALLET_PRIVATE_KEY}
+    volumes:
+      - ./logs:/workspaces/freeco-ai-trading-system/logs
+      - ./data:/workspaces/freeco-ai-trading-system/data
+    networks:
+      - freeco-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: freeco-mqtt-broker
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-logs:/mosquitto/log
+    networks:
+      - freeco-network
+    restart: unless-stopped
+
+networks:
+  freeco-network:
+    driver: bridge
+
+volumes:
+  mosquitto-data:
+  mosquitto-logs:

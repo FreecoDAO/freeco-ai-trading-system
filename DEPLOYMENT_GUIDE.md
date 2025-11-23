@@ -397,3 +397,38 @@ If Codespaces reports "recovery mode" or devcontainer configuration errors:
    ```
 
 If the rebuild fails, revert custom devcontainer overrides and use the provided minimal `.devcontainer/devcontainer.json`, then run "Rebuild Container" again.
+
+---
+
+## ☁️ Kubernetes Cloud Deployment
+
+Deploy to AWS EKS, Google GKE, Azure AKS, or any Kubernetes cluster:
+
+```bash
+# Quick deploy
+bash deploy-k8s.sh
+
+# Or manual deploy
+kubectl apply -k k8s/
+```
+
+**See** `k8s/CLOUD-DEPLOYMENT.md` for detailed cloud provider setup.
+
+### AWS EKS (Recommended)
+
+```bash
+# Create cluster
+eksctl create cluster --name freeco-ai --region us-east-1 --nodes 3
+
+# Deploy bot
+kubectl apply -k k8s/
+
+# Get dashboard URL
+kubectl get svc dashboard -n freeco-ai
+```
+
+### Auto-Scaling
+
+```bash
+kubectl autoscale deployment ai-signal-generator --min=2 --max=10 -n freeco-ai
+```

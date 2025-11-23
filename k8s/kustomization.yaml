@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: freeco-ai
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - mqtt-deployment.yaml
+  - ai-signal-generator-deployment.yaml
+  - dashboard-deployment.yaml
+
+commonLabels:
+  app: freeco-ai-trading-bot
+  managed-by: kustomize
+
+commonAnnotations:
+  description: "FreEco AI Trading Bot - Kubernetes Deployment"
+  version: "1.0.0"

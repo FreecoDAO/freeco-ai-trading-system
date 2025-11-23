@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-signal-generator
+  namespace: freeco-ai
+  labels:
+    app: ai-signal-generator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-signal-generator
+  template:
+    metadata:
+      labels:
+        app: ai-signal-generator
+    spec:
+      containers:
+      - name: ai-signal-gen
+        image: freeco-ai/ai-signal-generator:latest
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: freeco-config
+        - secretRef:
+            name: freeco-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - ps aux | grep -v grep | grep "node.*ai-signal-generator" || exit 1
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - test -f /tmp/ai-signal-generator.log && tail -1 /tmp/ai-signal-generator.log | grep -q "connected" || exit 0
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        volumeMounts:
+        - name: logs
+          mountPath: /tmp
+      volumes:
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always

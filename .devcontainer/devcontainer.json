@@ -1,18 +1,26 @@
 {
-  "name": "FreEco AI Trading Bot - Alpine Devcontainer",
-  "image": "alpine:3.22",
-  "workspaceFolder": "/workspaces/freeco-ai-trading-system",
-  "remoteUser": "root",
-  "forwardPorts": [8501],
-  "postCreateCommand": "apk update || true && apk add --no-cache nodejs npm python3 py3-pip mosquitto mosquitto-clients curl git bash libc6-compat || true && npm --version >/dev/null 2>&1 || true",
-  "runArgs": ["--init"],
+  "name": "FreEco AI Trading Bot",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+  "forwardPorts": [8501, 1883],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode",
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode-remote.remote-containers"
+        "ms-vscode.remote-repositories",
+        "ms-vscode-remote.remote-containers",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
       ],
       "settings": {
-        "terminal.integrated.shell.linux": "/bin/sh"
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "ms-python.python"
+        }
       }
     }
   }

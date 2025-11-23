@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freeco-config
+  namespace: freeco-ai
+data:
+  DEEPSEEK_API_URL: "https://api.novita.ai/openai/v1"
+  DEEPSEEK_MODEL: "deepseek/deepseek-r1"
+  MQTT_BROKER: "mqtt-broker.freeco-ai.svc.cluster.local"
+  MQTT_PORT: "1883"
+  MQTT_TOPIC_PREFIX: "hbot/predictions"
+  FREECO_TOKEN: "2qEb9Ai7uErRxsjWnT6MaoYXajXf8KjGGhQEsG24jPxc"
+  CHF_TOKEN: "3bKaHFgY4Ja9JMgxxZhzi3NtbSd3WQRzPYadgZ7dLzFB"
+  TRADING_PAIRS: "FREECO_CHF,FREECO_HAPPYTAILS"
+  PYTHON_UNBUFFERED: "1"
+  NODE_ENV: "production"
