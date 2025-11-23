@@ -1,6 +1,6 @@
 /**
- * Wallet Management Service with Jupiter AG SDK
- * Manages Solana wallet connections and Jupiter DEX integration
+ * Wallet Management Service with Jupiter Wallet SDK
+ * Complete Solana wallet integration with Jupiter DEX
  */
 
 const { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
@@ -19,7 +19,7 @@ class WalletService {
   }
 
   async init() {
-    console.log('💰 Initializing Wallet Service with Jupiter AG SDK...');
+    console.log('💰 Initializing Wallet Service with Jupiter SDK...');
     
     try {
       // Initialize Solana connection
@@ -35,7 +35,7 @@ class WalletService {
       const balance = await this.getBalance();
       console.log(`  💵 Balance: ${balance.toFixed(4)} SOL`);
       
-      // Check token balances
+      // Load token balances
       await this.loadTokenBalances();
       
       return true;
@@ -94,10 +94,7 @@ class WalletService {
       }
 
       if (Object.keys(this.tokenAccounts).length > 0) {
-        console.log('✓ Token accounts loaded:');
-        Object.entries(this.tokenAccounts).forEach(([mint, data]) => {
-          console.log(`  • ${mint}: ${data.amount} tokens`);
-        });
+        console.log('✓ Token accounts loaded');
       }
     } catch (error) {
       console.error('⚠️  Token balance load error:', error.message);
@@ -127,11 +124,6 @@ class WalletService {
 
       if (tokenAccounts.value.length > 0) {
         const amount = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-        this.tokenAccounts[tokenMint] = {
-          address: tokenAccounts.value[0].pubkey.toString(),
-          amount,
-          decimals: tokenAccounts.value[0].account.data.parsed.info.tokenAmount.decimals
-        };
         return amount;
       }
       return 0;
@@ -141,21 +133,31 @@ class WalletService {
     }
   }
 
+  /**
+   * Get quote from Jupiter API
+   * @param {string} inputMint - Input token mint
+   * @param {string} outputMint - Output token mint
+   * @param {number} amount - Amount in smallest unit
+   * @param {number} slippageBps - Slippage in basis points (50 = 0.5%)
+   */
   async getJupiterQuote(inputMint, outputMint, amount, slippageBps = 50) {
     try {
-      const response = await fetch(`${this.jupiterUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`);
+      const response = await fetch(
+        `${this.jupiterUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+      );
       const data = await response.json();
       
       if (!data.data || data.data.length === 0) {
         throw new Error('No route found');
       }
 
+      const route = data.data[0];
       return {
-        inputAmount: data.data[0].inAmount,
-        outputAmount: data.data[0].outAmount,
-        priceImpactPct: data.data[0].priceImpactPct,
-        marketInfos: data.data[0].marketInfos,
-        routePlan: data.data[0].routePlan
+        inputAmount: route.inAmount,
+        outputAmount: route.outAmount,
+        priceImpactPct: route.priceImpactPct,
+        marketInfos: route.marketInfos,
+        routePlan: route.routePlan
       };
     } catch (error) {
       console.error('❌ Jupiter quote error:', error.message);
@@ -163,36 +165,12 @@ class WalletService {
     }
   }
 
-  async getJupiterSwapInstructions(quote, inputMint, outputMint) {
-    try {
-      const response = await fetch(`${this.jupiterUrl}/swap-instructions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userPublicKey: this.wallet.publicKey.toString(),
-          quoteResponse: quote,
-          wrapAndUnwrapSol: true
-        })
-      });
-
-      const data = await response.json();
-      
-      if (!data.swapTransaction) {
-        throw new Error('No swap transaction generated');
-      }
-
-      return {
-        swapTransaction: data.swapTransaction,
-        setupTransaction: data.setupTransaction,
-        cleanupTransaction: data.cleanupTransaction,
-        addressLookupTableAddresses: data.addressLookupTableAddresses
-      };
-    } catch (error) {
-      console.error('❌ Jupiter swap instructions error:', error.message);
-      return null;
-    }
-  }
-
+  /**
+   * Execute swap on Jupiter DEX
+   * @param {string} inputMint - Input token mint
+   * @param {string} outputMint - Output token mint
+   * @param {number} amount - Amount to swap
+   */
   async executeJupiterSwap(inputMint, outputMint, amount) {
     try {
       console.log(`🔄 Executing Jupiter swap: ${amount} of ${inputMint}`);
@@ -206,18 +184,29 @@ class WalletService {
       console.log(`  Quote: ${quote.outputAmount} output tokens`);
       console.log(`  Price Impact: ${quote.priceImpactPct}%`);
 
-      // Step 2: Get swap instructions
-      const instructions = await this.getJupiterSwapInstructions(quote, inputMint, outputMint);
-      if (!instructions) {
-        throw new Error('Failed to get swap instructions');
+      // Step 2: Get swap instructions from Jupiter
+      const swapResponse = await fetch(`${this.jupiterUrl}/swap`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userPublicKey: this.wallet.publicKey.toString(),
+          quoteResponse: quote,
+          wrapAndUnwrapSol: true
+        })
+      });
+
+      const swapData = await swapResponse.json();
+      
+      if (!swapData.swapTransaction) {
+        throw new Error('No swap transaction generated');
       }
 
       // Step 3: Sign and send transaction
       const { Transaction } = require('@solana/web3.js');
-      const txBuffer = Buffer.from(instructions.swapTransaction, 'base64');
+      const txBuffer = Buffer.from(swapData.swapTransaction, 'base64');
       const transaction = Transaction.from(txBuffer);
 
-      // Sign transaction
+      // Sign with wallet
       transaction.sign(this.wallet);
 
       // Send transaction
@@ -244,52 +233,66 @@ class WalletService {
     }
   }
 
+  /**
+   * Get available routes from Jupiter
+   */
+  async getAvailableRoutes(inputMint, outputMint) {
+    try {
+      const response = await fetch(
+        `${this.jupiterUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=1000000000`
+      );
+      const data = await response.json();
+      
+      if (data.data && data.data.length > 0) {
+        return {
+          routes: data.data.length,
+          bestRoute: data.data[0],
+          allRoutes: data.data
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Routes fetch error:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Validate swap before execution
+   */
+  async validateSwap(inputMint, outputMint, amount) {
+    try {
+      const quote = await this.getJupiterQuote(inputMint, outputMint, amount);
+      
+      if (!quote) {
+        return {
+          valid: false,
+          error: 'No route found'
+        };
+      }
+
+      return {
+        valid: true,
+        inputAmount: amount,
+        outputAmount: quote.outputAmount,
+        priceImpact: quote.priceImpactPct,
+        minimumReceived: quote.outputAmount * (1 - quote.priceImpactPct / 100)
+      };
+    } catch (error) {
+      console.error('❌ Swap validation error:', error.message);
+      return {
+        valid: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get token price in SOL
+   */
   async getTokenPrice(tokenMint) {
     try {
-      // SOL mint for price comparison
       const solMint = 'So11111111111111111111111111111111111111112';
       const quote = await this.getJupiterQuote(tokenMint, solMint, 1000000000); // 1 token
       
-      if (quote) {
-        return parseFloat(quote.outputAmount) / 1000000000;
-      }
-      return 0;
-    } catch (error) {
-      console.error('❌ Price fetch error:', error.message);
-      return 0;
-    }
-  }
-
-  getWalletAddress() {
-    return this.wallet.publicKey.toString();
-  }
-
-  getKeyPair() {
-    return this.wallet;
-  }
-
-  getConnection() {
-    return this.connection;
-  }
-
-  async signTransaction(transaction) {
-    try {
-      transaction.sign(this.wallet);
-      return transaction;
-    } catch (error) {
-      console.error('❌ Transaction sign error:', error.message);
-      throw error;
-    }
-  }
-
-  // Get wallet info for API responses
-  getWalletInfo() {
-    return {
-      address: this.wallet.publicKey.toString(),
-      rpcUrl: this.rpcUrl,
-      jupiterUrl: this.jupiterUrl
-    };
-  }
-}
-
-module.exports = new WalletService();
+      if
