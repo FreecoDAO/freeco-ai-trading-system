@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hummingbot Web UI - Trading Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: monospace; background: #0a0e27; color: #00ff00; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #00ff00; padding-bottom: 20px; }
+        h1 { font-size: 2em; text-shadow: 0 0 10px #00ff00; }
+        
+        .tabs { display: flex; gap: 10px; margin: 20px 0; border-bottom: 1px solid #333; }
+        .tab { padding: 10px 20px; background: #1a1f3a; border: 1px solid #333; color: #00ff00; cursor: pointer; }
+        .tab.active { background: #00ff00; color: #000; }
+        .tab-content { display: none; padding: 20px; background: #1a1f3a; border: 1px solid #333; }
+        .tab-content.active { display: block; }
+        
+        .status-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .status-item { padding: 15px; background: #0a0e27; border: 1px solid #00ff00; border-radius: 4px; }
+        .status-label { color: #666; font-size: 0.8em; }
+        .status-value { font-size: 1.5em; margin-top: 5px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #00ff00; }
+        input, select, textarea { width: 100%; padding: 10px; background: #0a0e27; border: 1px solid #333; color: #00ff00; }
+        input:focus, select:focus { border: 1px solid #00ff00; outline: none; }
+        
+        button { padding: 10px 20px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #00cc00; }
+        button.danger { background: #ff3333; color: #fff; }
+        
+        .signal-list { max-height: 400px; overflow-y: auto; }
+        .signal-item { padding: 10px; margin-bottom: 5px; border-left: 3px solid #00ff00; }
+        .signal-item.buy { border-left-color: #00ff00; }
+        .signal-item.sell { border-left-color: #ff3333; }
+        .signal-item.hold { border-left-color: #ffff00; }
+        
+        .trade-list { max-height: 400px; overflow-y: auto; }
+        .trade-item { padding: 10px; margin-bottom: 5px; border-left: 3px solid #00ff00; background: rgba(0,255,0,0.05); }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        .error { color: #ff3333; }
+        .success { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Hummingbot Web UI</h1>
+            <p>Browser-based trading control & monitoring</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-label">Bot Status</div>
+                <div class="status-value" id="bot-status">⚫ Stopped</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Active Strategy</div>
+                <div class="status-value" id="strategy-name">None</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Total Trades</div>
+                <div class="status-value" id="trade-count">0</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Latest Signal</div>
+                <div class="status-value" id="latest-signal">—</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+            <div class="tab" onclick="switchTab('strategy')">⚙️ Strategy</div>
+            <div class="tab" onclick="switchTab('exchange')">🏪 Exchange</div>
+            <div class="tab" onclick="switchTab('signals')">📡 Signals</div>
+            <div class="tab" onclick="switchTab('trades')">📈 Trades</div>
+            <div class="tab" onclick="switchTab('config')">🔧 Config</div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Trading Control Panel</h2>
+            <div style="margin-top: 20px;">
+                <button onclick="startTrading()" style="background: #00ff00; color: #000; padding: 15px 30px; font-size: 1.1em;">▶ START TRADING</button>
+                <button onclick="stopTrading()" class="danger" style="padding: 15px 30px; font-size: 1.1em; margin-left: 10px;">⏹ STOP TRADING</button>
+            </div>
+            
+            <h3 style="margin-top: 30px;">System Info</h3>
+            <div id="system-info" style="margin-top: 15px; padding: 15px; background: #0a0e27; border: 1px solid #333;"></div>
+        </div>
+
+        <!-- Strategy Tab -->
+        <div id="strategy" class="tab-content">
+            <h2>Create Trading Strategy</h2>
+            <form onsubmit="createStrategy(event)">
+                <div class="grid">
+                    <div>
+                        <div class="form-group">
+                            <label>Strategy Name</label>
+                            <input type="text" id="strategy-name" placeholder="pure_market_making" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Exchange</label>
+                            <select id="strategy-exchange" required>
+                                <option>binance</option>
+                                <option>kraken</option>
+                                <option>jupiterswap</option>
+                                <option>raydium</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label>Trading Pair</label>
+                            <input type="text" id="strategy-pair" placeholder="BTC-USDT" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Order Amount</label>
+                            <input type="number" id="strategy-amount" placeholder="0.01" value="1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Bid Spread (%)</label>
+                        <input type="number" id="strategy-bid" placeholder="0.1" value="0.1" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Ask Spread (%)</label>
+                        <input type="number" id="strategy-ask" placeholder="0.1" value="0.1" step="0.01">
+                    </div>
+                </div>
+                
+                <button type="submit" style="margin-top: 20px;">✓ Create Strategy</button>
+            </form>
+        </div>
+
+        <!-- Exchange Tab -->
+        <div id="exchange" class="tab-content">
+            <h2>Add Exchange Connection</h2>
+            <form onsubmit="addExchange(event)">
+                <div class="form-group">
+                    <label>Exchange Name</label>
+                    <select id="exchange-name" required>
+                        <option>binance</option>
+                        <option>kraken</option>
+                        <option>coinbase</option>
+                        <option>jupiterswap</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="exchange-key" placeholder="Your API key" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>API Secret</label>
+                    <input type="password" id="exchange-secret" placeholder="Your API secret" required>
+                </div>
+                
+                <button type="submit">✓ Add Exchange</button>
+            </form>
+        </div>
+
+        <!-- Signals Tab -->
+        <div id="signals" class="tab-content">
+            <h2>AI Trading Signals (Real-time)</h2>
+            <p style="color: #666; margin-bottom: 15px;">Signals from FreEco AI Signal Generator via MQTT</p>
+            <div id="signal-list" class="signal-list"></div>
+        </div>
+
+        <!-- Trades Tab -->
+        <div id="trades" class="tab-content">
+            <h2>Executed Trades</h2>
+            <div id="trade-list" class="trade-list"></div>
+        </div>
+
+        <!-- Config Tab -->
+        <div id="config" class="tab-content">
+            <h2>Configuration</h2>
+            <form onsubmit="saveConfig(event)">
+                <div class="form-group">
+                    <label>MQTT Broker</label>
+                    <input type="text" id="config-mqtt" placeholder="localhost:1883" value="localhost:1883">
+                </div>
+                
+                <div class="form-group">
+                    <label>Risk Level</label>
+                    <select id="config-risk">
+                        <option value="conservative">Conservative (low risk)</option>
+                        <option value="moderate" selected>Moderate</option>
+                        <option value="aggressive">Aggressive (high risk)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Max Trade Size (USD)</label>
+                    <input type="number" id="config-max-trade" placeholder="1000" value="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label>Stop Loss (%)</label>
+                    <input type="number" id="config-stop-loss" placeholder="2.5" value="2.5" step="0.1">
+                </div>
+                
+                <button type="submit">✓ Save Configuration</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function updateStatus() {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                document.getElementById('bot-status').textContent = 
+                    data.status === 'running' ? '🟢 Running' : '⚫ Stopped';
+                document.getElementById('strategy-name').textContent = 
+                    data.strategy ? data.strategy.name : 'None';
+                document.getElementById('trade-count').textContent = 
+                    data.trades.length;
+                document.getElementById('latest-signal').textContent = 
+                    data.signals.length > 0 ? data.signals[0].signal : '—';
+                
+                document.getElementById('system-info').innerHTML = 
+                    `Status: ${data.status}<br>Trades: ${data.trades.length}<br>Strategy: ${data.strategy ? data.strategy.name : 'None'}`;
+            });
+        }
+
+        function updateSignals() {
+            fetch('/api/signals').then(r => r.json()).then(signals => {
+                document.getElementById('signal-list').innerHTML = signals
+                    .map(s => `<div class="signal-item ${s.signal.toLowerCase()}">
+                        <strong>${s.signal}</strong> ${s.pair} @ ${s.price_target} (${s.confidence}%)
+                        <br><small>${new Date(s.timestamp).toLocaleTimeString()}</small>
+                    </div>`)
+                    .join('');
+            });
+        }
+
+        function startTrading() {
+            fetch('/api/start-trading', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => alert(data.message || 'Trading started'))
+                .catch(e => alert('Error: ' + e));
+            setTimeout(updateStatus, 500);
+        }
+
+        function stopTrading() {
+            fetch('/api/stop-trading', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => alert(data.message || 'Trading stopped'))
+                .catch(e => alert('Error: ' + e));
+            setTimeout(updateStatus, 500);
+        }
+
+        function createStrategy(e) {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('strategy-name').value,
+                exchange: document.getElementById('strategy-exchange').value,
+                pair: document.getElementById('strategy-pair').value,
+                bid_spread: parseFloat(document.getElementById('strategy-bid').value),
+                ask_spread: parseFloat(document.getElementById('strategy-ask').value),
+                order_amount: parseFloat(document.getElementById('strategy-amount').value)
+            };
+            fetch('/api/create-strategy', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } })
+                .then(r => r.json())
+                .then(data => alert('Strategy created: ' + data.strategy.name))
+                .catch(e => alert('Error: ' + e));
+            setTimeout(updateStatus, 500);
+        }
+
+        function addExchange(e) {
+            e.preventDefault();
+            const data = {
+                exchange: document.getElementById('exchange-name').value,
+                api_key: document.getElementById('exchange-key').value,
+                api_secret: document.getElementById('exchange-secret').value
+            };
+            fetch('/api/add-exchange', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } })
+                .then(r => r.json())
+                .then(data => alert('Exchange added: ' + data.exchange.name))
+                .catch(e => alert('Error: ' + e));
+        }
+
+        function saveConfig(e) {
+            e.preventDefault();
+            const data = {
+                mqtt: document.getElementById('config-mqtt').value,
+                risk_level: document.getElementById('config-risk').value,
+                max_trade: document.getElementById('config-max-trade').value,
+                stop_loss: document.getElementById('config-stop-loss').value
+            };
+            fetch('/api/config', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } })
+                .then(r => r.json())
+                .then(data => alert('Configuration saved'))
+                .catch(e => alert('Error: ' + e));
+        }
+
+        // Update status every 2 seconds
+        updateStatus();
+        updateSignals();
+        setInterval(updateStatus, 2000);
+        setInterval(updateSignals, 3000);
+    </script>
+</body>
+</html>

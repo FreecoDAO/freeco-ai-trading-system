@@ -359,6 +359,70 @@ mosquitto_sub -h localhost -t "hbot/predictions/#" -v
 
 ---
 
+## 🤖 Access Hummingbot Trading Interface
+
+You have **2 ways** to access Hummingbot:
+
+### Option 1: Web UI (Recommended for Codespaces)
+
+```bash
+bash start-hummingbot-web.sh
+```
+
+**Access**: http://localhost:8502
+
+Features:
+- ✅ Browser-based (no CLI needed)
+- ✅ Create strategies visually
+- ✅ Connect to exchanges
+- ✅ Real-time AI signal monitoring
+- ✅ Start/stop trading with one click
+- ✅ View trade history
+
+### Option 2: CLI (Traditional)
+
+```bash
+bash start-hummingbot.sh
+```
+
+Or install and run directly:
+```bash
+source /workspaces/venv/hummingbot/bin/activate
+hummingbot
+```
+
+**See** `HUMMINGBOT-UI-GUIDE.md` for complete CLI setup.
+
+### Three-Interface Trading System
+
+```
+┌─────────────────────────────────────────────┐
+│  1. Hummingbot CLI (Terminal)               │
+│     bash start-hummingbot.sh                │
+│     - Strategy configuration                │
+│     - Trading control                       │
+│     - Real-time monitoring                  │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│  2. FreEco Dashboard (Web)                  │
+│     http://localhost:8501                   │
+│     - AI signal metrics                     │
+│     - System status                         │
+│     - Configuration panel                   │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│  3. Solana Explorer (Blockchain)            │
+│     https://explorer.solana.com             │
+│     - On-chain transactions                 │
+│     - Wallet verification                   │
+│     - Trade confirmation                    │
+└─────────────────────────────────────────────┘
+```
+
+---
+
 ## 📞 Support & Resources
 
 - **GitHub Repository**: https://github.com/FreecoDAO/freeco-ai-trading-system
@@ -431,4 +495,46 @@ kubectl get svc dashboard -n freeco-ai
 
 ```bash
 kubectl autoscale deployment ai-signal-generator --min=2 --max=10 -n freeco-ai
+```
+
+---
+
+## 🛑 Stop Everything
+
+### Quick Stop
+
+```bash
+bash stop-all.sh
+```
+
+### Manual Stop
+
+```bash
+# Stop all services at once
+pkill -f "mosquitto|node|python3.*server|python3.*app"
+```
+
+### Stop Individual Services
+
+```bash
+# Stop MQTT Broker
+pkill mosquitto
+
+# Stop AI Signal Generator
+pkill -f "node.*ai-signal-generator"
+
+# Stop Dashboard Server (port 8501)
+pkill -f "python3.*server.py"
+
+# Stop Hummingbot Web UI (port 8502)
+pkill -f "python3.*app.py"
+```
+
+### Verify Everything Stopped
+
+```bash
+# Check if services are running
+ps aux | grep -E "mosquitto|node|python3" | grep -v grep
+
+# Should return empty (no services running)
 ```
