@@ -1,37 +1,31 @@
 # FreEco AI Trading Bot - Deployment Guide
 
-## Quick Start (GitHub Codespaces)
-
-### 1. Access Your Codespace
-
-Open your GitHub Codespace at: https://freeco-trading-bot-x5w6g6jj4qx5c5rq.github.dev
-
-### 2. Run the Automated Setup
+## ⚡ Quick Start (1 Command)
 
 ```bash
-cd /workspaces/freeco-ai-trading-system
-./setup-codespace.sh
+cd /workspaces/freeco-ai-trading-system && bash run.sh
 ```
 
-This script will:
-- ✅ Install all system dependencies (Node.js, Python, MQTT)
-- ✅ Install Node.js packages (mqtt, axios, dotenv)
-- ✅ Start MQTT Broker (Mosquitto)
-- ✅ Test AI Signal Generator (DeepSeek R1)
-- ✅ Install Hummingbot Dashboard
-- ✅ Create startup scripts
+That's it! This single command will:
+- ✅ Setup all dependencies (Node.js, Python, MQTT) if needed
+- ✅ Start MQTT Broker
+- ✅ Start AI Signal Generator (DeepSeek R1)
+- ✅ Start Dashboard HTTP Server (no authentication needed!)
+- ✅ Show dashboard access information
 
-### 3. Start All Services
+---
 
-```bash
-/workspaces/freeco-ai-trading-system/start-all.sh
-```
+## 📊 What You'll See
 
-### 4. Access the Dashboard
+After running the command, you'll see:
+- ✓ MQTT Broker: Running on localhost:1883
+- ✓ AI Signal Generator: Running (DeepSeek R1)
+- ✓ Dashboard HTTP Server: Running on http://localhost:8501
 
-Open in your browser:
-- **Hummingbot Dashboard**: `http://localhost:8501`
-- **MQTT Broker**: `localhost:1883`
+**Dashboard Access:**
+- Local: `http://localhost:8501`
+- GitHub Codespaces: `https://your-codespace-name-8501.app.github.dev`
+- Command: `bash open-dashboard.sh`
 
 ---
 
@@ -49,8 +43,9 @@ Open in your browser:
 │           │                          │                       │
 │           │                          ▼                       │
 │           │                 ┌──────────────────┐            │
-│           │                 │   Hummingbot     │            │
 │           │                 │   Dashboard      │            │
+│           │                 │   HTTP Server    │            │
+│           │                 │  (Python 3)      │            │
 │           │                 └────────┬─────────┘            │
 │           │                          │                       │
 │           ▼                          ▼                       │
@@ -64,81 +59,117 @@ Open in your browser:
 
 ---
 
-## Configuration
+## 🛠️ Helpful Commands
 
-### Environment Variables
-
-The system uses the following environment variables (already configured):
+### Access Dashboard
 
 ```bash
-# AI API Keys
+# GitHub Codespaces - Forward port 8501
+# Click on the "Ports" tab in Codespaces terminal
+# Your dashboard will be available at the forwarded URL
+
+# Or open with script
+bash open-dashboard.sh
+
+# Or manually navigate to:
+# http://localhost:8501 (local)
+# Your-Codespace-URL:8501 (GitHub Codespaces)
+```
+
+### Monitor Services
+
+```bash
+# View AI Signal Generator logs (real-time)
+tail -f /tmp/ai-signal-generator.log
+
+# View Dashboard logs
+tail -f /tmp/hummingbot-dashboard.log
+
+# View MQTT Broker signals in real-time
+mosquitto_sub -h localhost -t "hbot/predictions/#" -v
+```
+
+### Stop Services
+
+```bash
+bash stop-all.sh
+```
+
+### Check Running Services
+
+```bash
+ps aux | grep -E "mosquitto|node|streamlit"
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables (.env)
+
+The setup script automatically creates `.env` with these values:
+
+```bash
+# AI API Keys (Novita.ai - DeepSeek R1)
 NOVITA_API_KEY=sk_18Vuiio04cZmEs3ieW1xE2j9uoT9_VuGewihPFqVRe0
 DEEPSEEK_API_URL=https://api.novita.ai/openai/v1
 DEEPSEEK_MODEL=deepseek/deepseek-r1
-
-# Minimax M2 (Optional)
-MINIMAX_API_KEY=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-MINIMAX_API_URL=https://api.minimax.io/v1
-MINIMAX_MODEL=MiniMax-M2
 
 # MQTT Configuration
 MQTT_BROKER=localhost
 MQTT_PORT=1883
 MQTT_TOPIC_PREFIX=hbot/predictions
 
-# Trading Configuration
+# Trading Configuration (Solana Token Addresses)
 FREECO_TOKEN=2qEb9Ai7uErRxsjWnT6MaoYXajXf8KjGGhQEsG24jPxc
 CHF_TOKEN=3bKaHFgY4Ja9JMgxxZhzi3NtbSd3WQRzPYadgZ7dLzFB
 TRADING_PAIRS=FREECO_CHF,FREECO_HAPPYTAILS
 
-# Master Wallet (Add your private key here)
+# Master Wallet (Update with your private key when ready to trade)
+MASTER_WALLET_ADDRESS=FYsXJAt52drwDiytaodNjBNunG37uDA5T5Zkm1XgvzVw
 MASTER_WALLET_PRIVATE_KEY=your-private-key-here
 ```
 
-### Wallet Setup
-
-You have 5 Solana wallets created:
-
-1. **Master Wallet**: `FYsXJAt52drwDiytaodNjBNunG37uDA5T5Zkm1XgvzVw`
-   - Funded with 10 FRE.ECO tokens
-   - Used for main trading operations
-
-2. **Arbitrage Wallet**: For arbitrage strategies
-3. **Market Maker Wallet**: For market making
-4. **Trend Follower Wallet**: For trend-following strategies
-5. **Treasury Wallet**: For fund management
+To update values manually:
+```bash
+nano .env
+# Edit and save
+source .env
+```
 
 ---
 
-## AI Models
+## 🤖 AI Models
 
 ### Primary: DeepSeek R1 (via Novita.ai)
 
 - **Model**: `deepseek/deepseek-r1`
-- **Cost**: $0.7/Mt Input, $2.5/Mt Output
-- **Speed**: Fast (5-10 seconds per analysis)
-- **Use Case**: Real-time market analysis and trading signals
+- **Cost**: $0.70 per 1M input tokens, $2.50 per 1M output tokens
+- **Speed**: 5-10 seconds per analysis
+- **Availability**: 24/7 inference
+- **Use**: Real-time market analysis and trading signals
 
-### Secondary: Minimax M2 (Optional)
+### Signal Features
 
-- **Model**: `MiniMax-M2`
-- **Cost**: $0.3/Mt Input, $1.2/Mt Output
-- **Speed**: Medium (10-15 seconds per analysis)
-- **Use Case**: Fallback for complex strategy decisions
+- Real-time signal generation every 60 seconds
+- Trend analysis (BUY/SELL/HOLD)
+- Confidence scoring (0-100%)
+- Price target predictions
+- MQTT publish to `hbot/predictions/freeco_chf`
 
 ---
 
-## Trading Strategies
+## 📈 Trading Strategies
 
 ### 1. AI-Driven Market Making
 
-- Uses AI signals from DeepSeek R1
+- Uses DeepSeek R1 signals
 - MQTT-based communication
-- Hummingbot's `ai_livestream` controller
+- Automatic order placement on Jupiter DEX
 
 ### 2. Arbitrage
 
-- Cross-DEX arbitrage opportunities
+- Cross-DEX arbitrage detection
 - Jupiter aggregation for best prices
 - Dedicated arbitrage wallet
 
@@ -150,124 +181,219 @@ You have 5 Solana wallets created:
 
 ---
 
-## Monitoring & Logs
+## 🚨 Troubleshooting
 
-### View Logs
+### Dashboard Returns 401 Unauthorized Error
+
+**The 401 error means Streamlit is still running from a previous attempt.**
 
 ```bash
-# MQTT Broker
-tail -f /tmp/mosquitto.log
+# Step 1: Diagnose what's running
+bash diagnose.sh
 
-# AI Signal Generator
-tail -f /tmp/ai-signal-generator.log
+# Step 2: If you see "FOUND STREAMLIT", force restart everything
+bash force-restart.sh
+sleep 2
 
-# Hummingbot Dashboard
-tail -f /tmp/hummingbot-dashboard.log
+# Step 3: Start fresh
+bash run.sh
 ```
 
-### Check Running Services
+**What's happening:**
+- Old Streamlit process is still listening on port 8501
+- Streamlit requires authentication in some configurations
+- The new HTTP server can't start because port is in use
+
+**Solution:**
+- Force kill all processes
+- Clear all caches
+- Start completely fresh
+
+### Setup Failed
 
 ```bash
-# Check if services are running
-ps aux | grep mosquitto
-ps aux | grep node
-ps aux | grep streamlit
+# Re-run setup with verbose output
+bash -x setup-codespace.sh
+
+# Check if required tools are installed
+which node python3 mosquitto npm
 ```
 
-### Test MQTT Connection
+### MQTT Connection Issues
 
 ```bash
-# Subscribe to signals
-mosquitto_sub -h localhost -t "hbot/predictions/#" -v
-
-# Publish test signal
-mosquitto_pub -h localhost -t "hbot/predictions/test" -m "test message"
-```
-
----
-
-## Troubleshooting
-
-### MQTT Broker Not Starting
-
-```bash
-# Kill existing process
+# Kill existing MQTT processes
 pkill mosquitto
+sleep 1
 
-# Restart
-mosquitto -c /etc/mosquitto/mosquitto.conf &
+# Restart MQTT explicitly
+mosquitto -c /etc/mosquitto/mosquitto.conf -d -p 1883
+sleep 2
+
+# Verify MQTT is listening
+netstat -tlnp | grep 1883
+
+# Test connection
+mosquitto_pub -h localhost -t "test" -m "hello" && echo "✓ MQTT working"
 ```
 
-### AI Signal Generator Errors
+### API Key Issues
 
 ```bash
-# Check API key
-echo $NOVITA_API_KEY
+# Verify API key is set
+echo "API Key: $NOVITA_API_KEY"
 
-# Test API directly
+# Test API connectivity
 curl -s "https://api.novita.ai/openai/v1/chat/completions" \
   -H "Authorization: Bearer $NOVITA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek/deepseek-r1","messages":[{"role":"user","content":"Hello"}],"max_tokens":50}'
+  -d '{"model":"deepseek/deepseek-r1","messages":[{"role":"user","content":"test"}],"max_tokens":50}' \
+  | head -c 200
 ```
 
-### Hummingbot Dashboard Not Loading
+### AI Signal Generator Not Generating Signals
 
 ```bash
-# Check if Streamlit is running
-ps aux | grep streamlit
+# Check logs for errors
+tail -20 /tmp/ai-signal-generator.log
 
-# Restart dashboard
-cd /workspaces/hummingbot-dashboard
-streamlit run main.py --server.port 8501 --server.address 0.0.0.0
+# Restart AI Signal Generator
+pkill -f "node.*ai-signal-generator"
+sleep 1
+node /workspaces/freeco-ai-trading-system/src/ai-signal-generator.js &
 ```
 
 ---
 
-## Next Steps
+## ✅ Verification Checklist
 
-1. **Fund Your Wallets**
-   - Transfer SOL for gas fees
-   - Transfer FRE.ECO tokens for trading
+After running setup, verify everything is working:
 
-2. **Configure Hummingbot**
-   - Import wallet private keys
-   - Set up trading pairs (FRE.ECO/CHF)
-   - Configure risk parameters
+```bash
+# Quick diagnosis
+bash diagnose.sh
 
-3. **Test Trading**
-   - Start with small amounts
-   - Monitor AI signals
-   - Verify trades on Solana Explorer
+# Or manual checks:
+# 1. Check MQTT Broker
+ps aux | grep mosquitto && echo "✓ MQTT running" || echo "✗ MQTT not running"
 
-4. **Scale Up**
-   - Increase position sizes
-   - Add more trading pairs
-   - Deploy multiple strategies
+# 2. Check AI Signal Generator
+ps aux | grep "node.*ai-signal-generator" && echo "✓ AI Signal Gen running" || echo "✗ AI Signal Gen not running"
 
----
+# 3. Check Dashboard HTTP Server (NOT Streamlit!)
+ps aux | grep "python3.*server.py" && echo "✓ Dashboard running" || echo "✗ Dashboard not running"
+ps aux | grep streamlit && echo "✗ STREAMLIT RUNNING - RUN: bash force-restart.sh"
 
-## Security Notes
+# 4. Check API Key
+[ -n "$NOVITA_API_KEY" ] && echo "✓ API key configured" || echo "✗ API key missing"
 
-⚠️ **IMPORTANT:**
+# 5. Check MQTT connectivity
+mosquitto_pub -h localhost -t "test" -m "test" 2>/dev/null && echo "✓ MQTT connectivity OK" || echo "✗ MQTT connectivity failed"
 
-- Never commit private keys to Git
-- Use environment variables for sensitive data
-- Keep API keys secure
-- Monitor wallet balances regularly
-- Set up alerts for unusual activity
+# 6. Test Dashboard HTTP Access (should NOT return 401)
+curl -I http://localhost:8501 2>&1 | grep -E "200|401"
+```
+
+All checks should show ✓ for the system to be ready.
 
 ---
 
-## Support
+## 📚 Next Steps
+
+### 1. Run the Bot
+
+```bash
+bash run.sh
+# Services will start automatically
+```
+
+### 2. Access Dashboard
+
+```bash
+# GitHub Codespaces: Check Ports tab for forwarded URL
+# Local: http://localhost:8501
+bash open-dashboard.sh
+```
+
+### 3. Monitor Live Signals
+
+```bash
+# In a new terminal, watch AI signals in real-time
+mosquitto_sub -h localhost -t "hbot/predictions/#" -v
+
+# In dashboard, watch signal confidence scores update
+```
+
+### 4. Fund Wallets (When Ready to Trade)
+
+- Transfer SOL for gas fees (0.1-1 SOL minimum)
+- Transfer FRE.ECO tokens for trading
+- Update `MASTER_WALLET_PRIVATE_KEY` in `.env`
+
+### 5. Test Trading (Optional)
+
+- Start with small test amounts
+- Monitor execution on Solana Explorer
+- Verify trades match signals
+- Scale up once confident
+
+---
+
+## 📁 Project Structure
+
+```
+/workspaces/freeco-ai-trading-system/
+├── run.sh                      # Start everything (main command)
+├── setup-codespace.sh          # Automated setup (run once)
+├── start-all.sh                # Start all services
+├── stop-all.sh                 # Stop all services
+├── open-dashboard.sh           # Open dashboard in browser
+├── .env                        # Configuration (auto-created)
+├── DEPLOYMENT_GUIDE.md         # This file
+├── README.md                   # Project overview
+├── src/
+│   └── ai-signal-generator.js  # AI signal generation logic
+└── hummingbot-dashboard/
+    └── server.py               # HTTP Dashboard Server
+```
+
+---
+
+## 📞 Support & Resources
 
 - **GitHub Repository**: https://github.com/FreecoDAO/freeco-ai-trading-system
 - **Hummingbot Docs**: https://docs.hummingbot.org
-- **Novita.ai Docs**: https://novita.ai/docs
-- **Solana Docs**: https://docs.solana.com
+- **Novita.ai API Docs**: https://novita.ai/docs
+- **Solana Documentation**: https://docs.solana.com
+- **Jupiter DEX**: https://jup.ag
 
 ---
 
-## License
+## ⚠️ Security Notes
 
-This project is open source under the Apache 2.0 License.
+- ⛔ **Never commit private keys to Git**
+- ⛔ **Never share API keys or `.env` files**
+- ✅ Use environment variables (`.env`) for all sensitive data
+- ✅ Keep API keys and wallet private keys secure
+- ✅ Monitor wallet balances regularly
+- ✅ Enable alerts for unusual activity
+- ✅ Use a dedicated wallet for trading bots (not main wallet)
+
+---
+
+## 📄 License
+
+This project is released under the **Apache 2.0 License**.
+
+## Quick troubleshooting: Rebuild the dev container
+
+If Codespaces reports "recovery mode" or devcontainer configuration errors:
+
+1. Open the Command Palette in VS Code (Ctrl/Cmd+Shift+P) and run: "Dev Containers: Rebuild Container".
+2. Alternatively, from the terminal run:
+   ```bash
+   # quick diagnostic: show processes and what's listening on port 8501
+   bash /workspaces/freeco-ai-trading-system/diagnose.sh || (ps aux | head -n 20; netstat -tlnp | grep 8501 || true)
+   ```
+
+If the rebuild fails, revert custom devcontainer overrides and use the provided minimal `.devcontainer/devcontainer.json`, then run "Rebuild Container" again.

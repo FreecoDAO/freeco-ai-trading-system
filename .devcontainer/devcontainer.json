@@ -1,57 +1,19 @@
 {
-  "name": "FreEco AI Trading System",
-  "image": "mcr.microsoft.com/devcontainers/python:3.11",
-  
-  "hostRequirements": {
-    "cpus": 4,
-    "memory": "16gb",
-    "storage": "32gb"
-  },
-
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
-    },
-    "ghcr.io/devcontainers/features/git:1": {}
-  },
-
-  "forwardPorts": [8080, 8501, 1883],
-  "portsAttributes": {
-    "8080": {
-      "label": "Hummingbot API",
-      "onAutoForward": "notify"
-    },
-    "8501": {
-      "label": "Hummingbot Dashboard",
-      "onAutoForward": "openBrowser"
-    },
-    "1883": {
-      "label": "MQTT Broker",
-      "onAutoForward": "silent"
-    }
-  },
-
+  "name": "FreEco AI Trading Bot - Alpine Devcontainer",
+  "image": "alpine:3.22",
+  "workspaceFolder": "/workspaces/freeco-ai-trading-system",
+  "remoteUser": "root",
+  "forwardPorts": [8501],
+  "postCreateCommand": "apk update || true && apk add --no-cache nodejs npm python3 py3-pip mosquitto mosquitto-clients curl git bash libc6-compat || true && npm --version >/dev/null 2>&1 || true",
+  "runArgs": ["--init"],
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-azuretools.vscode-docker",
-        "redhat.vscode-yaml",
-        "esbenp.prettier-vscode"
+        "ms-vscode-remote.remote-containers"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true,
-        "python.formatting.provider": "black",
-        "editor.formatOnSave": true
+        "terminal.integrated.shell.linux": "/bin/sh"
       }
     }
-  },
-
-  "postCreateCommand": "bash .devcontainer/setup.sh",
-
-  "remoteUser": "vscode"
+  }
 }
